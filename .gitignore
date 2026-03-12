@@ -54,3 +54,9 @@ CLAUDE.local.md
 # Output artifacts — uncomment lines below based on your preference
 # *.rds
 # output/**/*.rds
+
+# Data intermediate files
+data/temp/
+
+# Nested repo clone (not part of this project)
+my-project/

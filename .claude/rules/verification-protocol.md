@@ -1,53 +1,67 @@
 ---
 paths:
-  - "Slides/**/*.tex"
-  - "Quarto/**/*.qmd"
-  - "docs/**"
+  - "scripts/**/*.do"
+  - "scripts/**/*.R"
+  - "data/**"
+  - "output/**"
 ---
 
 # Task Completion Verification Protocol
 
 **At the end of EVERY task, Claude MUST verify the output works correctly.** This is non-negotiable.
 
-## For Quarto/HTML Slides:
-1. Run `./scripts/sync_to_docs.sh` (or `./scripts/sync_to_docs.sh LectureN`) to render and deploy
-2. Open the HTML in browser: `open docs/slides/LectureX.html` (macOS) or `xdg-open` (Linux)
-3. Verify images display by reading 2-3 image files to confirm valid content
-4. Check HTML source for correct image paths
-5. Check for overflow by scanning dense slides
-6. Verify environment parity: every Beamer box environment has a CSS equivalent in the QMD
-7. Report verification results
+---
 
-## For LaTeX/Beamer Slides:
-1. Compile with xelatex and check for errors
-2. Open the PDF to verify figures render (`open` on macOS, `xdg-open` on Linux)
-3. Check for overfull hbox warnings
+## For Stata Do-Files
 
-## For TikZ Diagrams in HTML/Quarto:
-1. Browsers **cannot** display PDF images inline — ALWAYS convert to SVG
-2. Use SVG (vector format) for crisp rendering: `pdf2svg input.pdf output.svg`
-3. **NEVER use PNG for diagrams** — PNG is raster and looks blurry
-4. Verify SVG files contain valid XML/SVG markup
-5. Copy SVGs to `docs/Figures/LectureX/` via `sync_to_docs.sh`
-6. **Freshness check:** Before using any TikZ SVG, verify extract_tikz.tex matches current Beamer source
+1. Run the do-file in a clean session: `stata -b do scripts/stata/[file.do]` (batch mode)
+2. Check the log: scan for `r(error)`, `r(198)`, or any error exit
+3. Confirm output files exist with non-zero size:
+   - `data/clean/[output.dta]` if data cleaning
+   - `output/tables/[table.csv]` if producing tables
+4. Run the final invariant checks:
+   - `isid [key_vars]` — dataset uniqueness
+   - `tab _merge` check documented
+5. Spot-check key variables: `sum income age, detail` — are ranges sensible?
+6. Report: N obs in, N obs out, merge rates
 
-## For R Scripts:
-1. Run `Rscript scripts/R/filename.R`
-2. Verify output files (PDF, RDS) were created with non-zero size
-3. Spot-check estimates for reasonable magnitude
+## For R Scripts
 
-## Common Pitfalls:
-- **PDF images in HTML**: Browsers don't render PDFs inline → convert to SVG
-- **Relative paths**: `../Figures/` works from `Quarto/` but not from `docs/slides/` → use `sync_to_docs.sh`
-- **Assuming success**: Always verify output files exist AND contain correct content
-- **Stale TikZ SVGs**: extract_tikz.tex diverges from Beamer source → always diff-check
+1. Run: `Rscript scripts/R/[file.R]`
+2. Confirm exit code 0 (no errors)
+3. Confirm output files created at expected paths
+4. Spot-check estimates for reasonable magnitude and sign
+5. Open one figure to verify visual quality (not blank, correct axis labels)
 
-## Verification Checklist:
+## For Figures (both Stata and R)
+
+1. File created at `output/figures/[name.pdf]` or `.png`
+2. Non-zero file size
+3. Read the file to confirm it is a valid image (not an empty/corrupt render)
+4. Check: axis labels present, legend readable, no clipping
+
+## For Merged/Joined Datasets
+
+1. `tab _merge` was documented in the script (not silently dropped)
+2. Match rate is reasonable (document if < 90%)
+3. `isid` passes on final output
+4. N-obs change from merge is explained in the cleaning log
+
+## Common Pitfalls
+
+- **Silent Stata errors:** `quietly` can swallow errors — always check the log
+- **R warnings ≠ success:** Check for `NA` values in key output columns
+- **Phantom output:** File exists from a previous run; check modification timestamp
+- **`_merge` never inspected:** Failure to tab _merge before dropping is a blocking issue
+
+## Verification Checklist
+
 ```
-[ ] Output file created successfully
-[ ] No compilation/render errors
-[ ] Images/figures display correctly
-[ ] Paths resolve in deployment location (docs/)
-[ ] Opened in browser/viewer to confirm visual appearance
-[ ] Reported results to user
+[ ] Script ran without errors (checked log or exit code)
+[ ] Output files exist and are non-empty
+[ ] Key identifier uniqueness confirmed (isid)
+[ ] Merge rates documented
+[ ] Estimates / ranges are plausible
+[ ] Figures: saved, non-blank, labels readable
+[ ] Reported results summary to user
 ```
